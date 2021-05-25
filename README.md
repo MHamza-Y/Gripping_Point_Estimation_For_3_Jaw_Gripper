@@ -1,0 +1,1 @@
+# Gripping_Point_Estimation_For_3_Jaw_Gripper
