@@ -10,10 +10,10 @@ def main():
     pybullet_data_path = pybullet_data.getDataPath()
     pb.setAdditionalSearchPath(pybullet_data_path)
     plane = pb.loadURDF("plane.urdf")
-    gripper_robot = pb.loadURDF('../resources/jaw_gripper_model_resources/fh_desc/model.urdf',useFixedBase=False,basePosition=[0,0,0.25])
-    tray = pb.loadURDF('../resources/tote/toteA_large.urdf',useFixedBase=True, basePosition = [-1,0,0])
+    gripper_robot = pb.loadURDF('jaw_gripper/resources/fh_desc/model.urdf', useFixedBase=False, basePosition=[0, 0, 0.25])
+    tray = pb.loadURDF('jaw_gripper/resources/tote/toteA_large.urdf', useFixedBase=True, basePosition = [-1, 0, 0])
     random_x = -round(rand.uniform(0.1, 1.0), 10)
-    cube = pb.loadURDF('../resources/objects/cube.urdf',basePosition=[random_x-0.7,0,1])
+    cube = pb.loadURDF('jaw_gripper/resources/objects/cube.urdf', basePosition=[random_x - 0.7, 0, 1])
 
     pb.setCollisionFilterGroupMask(tray,-1,0,0)
     pb.setCollisionFilterPair(gripper_robot,tray,-1, -1, 1)
