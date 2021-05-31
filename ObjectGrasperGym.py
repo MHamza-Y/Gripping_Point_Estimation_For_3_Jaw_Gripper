@@ -1,10 +1,10 @@
 import gym
 import jaw_gripper
+from jaw_gripper.envs import JawGripperEnv
 
-#env = gym.make('JawGripperEnv-v0')
-env = gym.make('MountainCar-v0')
+env = JawGripperEnv(renders=True)
 env.reset()
-for _ in range(1000):
-    env.render()
+for _ in range(10000):
+    #env.render()
     env.step(env.action_space.sample()) # take a random action
 env.close()

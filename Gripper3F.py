@@ -6,7 +6,7 @@ import pybullet_data
 #from stable_baselines import DDPG
 #from stable_baselines.common.policies import CnnPolicy
 
-#from jaw_gripper.envs import JawGripperEnv
+from jaw_gripper.envs import JawGripperEnv
 
 RENDER_HEIGHT = 720
 RENDER_WIDTH = 960
@@ -18,9 +18,9 @@ def main():
     pybullet_data_path = pybullet_data.getDataPath()
     pb.setAdditionalSearchPath(pybullet_data_path)
     plane = pb.loadURDF("plane.urdf")
-    gripper_robot = pb.loadURDF('jaw_gripper/resources/fh_desc/model.urdf', useFixedBase=False, basePosition=[0, 0, 0.25])
-    tray = pb.loadURDF('jaw_gripper/resources/tote/toteA_large.urdf', useFixedBase=True, basePosition = [-1, 0, 0])
-    random_x = -round(rand.uniform(0.1, 1.0), 10)
+    gripper_robot = pb.loadURDF('jaw_gripper/resources/fh_desc/model.urdf', useFixedBase=False, basePosition=[0, 0, 0.5])
+    tray = pb.loadURDF('jaw_gripper/resources/tote/toteA_large.urdf', useFixedBase=True, basePosition = [-0.8, 0, 0])
+    random_x = -round(rand.uniform(0.1, 0.6), 10)
 
     random_obj = pb.loadSDF('jaw_gripper/resources/models/ycb/001_chips_can/chips_can.sdf')
     random_obj_texture = pb.loadTexture('jaw_gripper/resources/models/ycb/001_chips_can/tsdf/textured.png')
@@ -40,21 +40,21 @@ def main():
     print(_link_name_to_index)
     pb.setRealTimeSimulation(1)
     pb.setGravity(0, 0, -10)
-    cam_dist = 1.3
-    cam_yaw = 180
-    cam_pitch = -90
+    cam_dist = 1.5
+    cam_yaw = 0
+    cam_pitch = -30
     while (pb.isConnected()):
         base_pos, orn = pb.getBasePositionAndOrientation(gripper_robot)
-        view_matrix = pb.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[-1,0,0],
+        view_matrix = pb.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[-1,-0.2,0.6],
                                                                 distance=cam_dist,
                                                                 yaw=cam_yaw,
                                                                 pitch=cam_pitch,
-                                                                roll=20,
+                                                                roll=0,
                                                                 upAxisIndex=2)
         proj_matrix = pb.computeProjectionMatrixFOV(fov=60,
                                                          aspect=float(RENDER_WIDTH) / RENDER_HEIGHT,
-                                                         nearVal=0.1,
-                                                         farVal=1.9)
+                                                         nearVal=0.2,
+                                                         farVal=4)
         (_, _, px, _, _) = pb.getCameraImage(width=RENDER_WIDTH,
                                                   height=RENDER_HEIGHT,
                                                   viewMatrix=view_matrix,
