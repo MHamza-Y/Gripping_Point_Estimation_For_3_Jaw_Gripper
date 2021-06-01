@@ -22,10 +22,8 @@ def main():
     tray = pb.loadURDF('jaw_gripper/resources/tote/toteA_large.urdf', useFixedBase=True, basePosition = [-0.8, 0, 0])
     random_x = -round(rand.uniform(0.1, 0.6), 10)
 
-    random_obj = pb.loadSDF('jaw_gripper/resources/models/ycb/001_chips_can/chips_can.sdf')
-    random_obj_texture = pb.loadTexture('jaw_gripper/resources/models/ycb/001_chips_can/tsdf/textured.png')
-    pb.changeVisualShape(random_obj[0],-1,textureUniqueId=random_obj_texture)
-    pb.resetBasePositionAndOrientation(random_obj[0],[random_x - 0.3, 0, 0.2],pb.getQuaternionFromEuler([0,0,1]))
+    random_obj = pb.loadURDF('jaw_gripper/resources/models/ycb/021_bleach_cleanser.urdf',basePosition=[random_x - 0.3, 0, 0.2])
+    #pb.resetBasePositionAndOrientation(random_obj[0],[random_x - 0.3, 0, 0.2],pb.getQuaternionFromEuler([0,0,1]))
 
     #pb.setCollisionFilterGroupMask(tray,-1,0,0)
     #pb.setCollisionFilterPair(gripper_robot,tray,-1, -1, 1)

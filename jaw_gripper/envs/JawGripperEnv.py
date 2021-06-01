@@ -6,6 +6,7 @@ import pybullet_data
 import os
 import time
 from jaw_gripper.resources.models.TargetObject import TargetObject
+from jaw_gripper.resources.tote.Tray import Tray
 from jaw_gripper.robots.UR3FRobot import UR3FRobot
 
 
@@ -26,15 +27,18 @@ class JawGripperEnv(gym.Env):
         pb.setAdditionalSearchPath(pybullet_data_path)
         self.plane = pb.loadURDF("plane.urdf")
         self.robot = UR3FRobot(self.client)
+        _, self.tray = Tray(self.client).get_ids()
         _, self.target_object_id = TargetObject(model_path=self.get_random_target_object_path(),
                                                 client=self.client).get_ids()
         self.setup_camera()
 
     def step(self, action):
+
         pb.stepSimulation(self.client)
         self._observation = self.get_observation()
         if self._renders:
             time.sleep(self._timeStep)
+        pb.setGravity(0, 0, -9.8)
 
         done = self._termination()
         reward = self._reward()
@@ -52,23 +56,22 @@ class JawGripperEnv(gym.Env):
         self.np_random, seed = gym_np_random(seed)
         return [seed]
 
-    def setup_camera(self, camera_target_position=None, cam_dist=1.3, cam_yaw=0, cam_pitch=-30, fov=60, near_val=0.2,
+    def setup_camera(self, camera_target_position=None, cam_dist=1.1, cam_yaw=0, cam_pitch=-40, fov=60, near_val=0.1,
                      far_val=3):
 
         if camera_target_position is None:
             camera_target_position = [-1, -0.2, 0.6]
 
-        while pb.isConnected():
-            self.view_matrix = pb.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=camera_target_position,
-                                                                    distance=cam_dist,
-                                                                    yaw=cam_yaw,
-                                                                    pitch=cam_pitch,
-                                                                    roll=0,
-                                                                    upAxisIndex=2)
-            self.proj_matrix = pb.computeProjectionMatrixFOV(fov=fov,
-                                                             aspect=float(self._width) / self._height,
-                                                             nearVal=near_val,
-                                                             farVal=far_val)
+        self.view_matrix = pb.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=camera_target_position,
+                                                                distance=cam_dist,
+                                                                yaw=cam_yaw,
+                                                                pitch=cam_pitch,
+                                                                roll=0,
+                                                                upAxisIndex=2)
+        self.proj_matrix = pb.computeProjectionMatrixFOV(fov=fov,
+                                                         aspect=float(self._width) / self._height,
+                                                         nearVal=near_val,
+                                                         farVal=far_val)
 
     def get_observation(self):
         img_arr = pb.getCameraImage(width=self._width,
@@ -82,11 +85,9 @@ class JawGripperEnv(gym.Env):
         return self._observation
 
     def get_random_target_object_path(self):
-        root, dirs, files = os.walk(self._target_object_models_folder).__next__()
-        chosen_model_path = root + '/' + self.np_random.choice(dirs)
         filenames = sorted(
-            [os.fsdecode(file) for file in os.listdir(chosen_model_path) if os.fsdecode(file).endswith(".sdf")])
-        chosen_model_path = chosen_model_path + '/' + filenames[0]
+            [os.fsdecode(file) for file in os.listdir(self._target_object_models_folder) if os.fsdecode(file).endswith(".urdf")])
+        chosen_model_path = self._target_object_models_folder + '/' + self.np_random.choice(filenames)
         return chosen_model_path
 
     def _termination(self):
