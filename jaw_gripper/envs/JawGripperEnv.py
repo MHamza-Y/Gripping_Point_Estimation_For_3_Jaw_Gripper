@@ -1,3 +1,4 @@
+from gym.spaces import Box
 from gym.utils.seeding import np_random as gym_np_random
 import gym
 import numpy as np
@@ -23,34 +24,46 @@ class JawGripperEnv(gym.Env):
         self._seed = self.seed()
         self.pb_connection_type = pb.GUI if self._renders else pb.DIRECT
         self.client = pb.connect(self.pb_connection_type)
+        self.observation_space = Box(
+            low=np.zeros(shape=[self._height, self._width, 4]),
+            high=np.full(shape=[self._height, self._width, 4], fill_value=255))
+        self.action_space = Box()
         pybullet_data_path = pybullet_data.getDataPath()
         pb.setAdditionalSearchPath(pybullet_data_path)
+        self.load_world()
+
+    def load_world(self):
+        self.step_number = 0
+        pb.resetSimulation(self.client)
         self.plane = pb.loadURDF("plane.urdf")
         self.robot = UR3FRobot(self.client)
         _, self.tray = Tray(self.client).get_ids()
         _, self.target_object_id = TargetObject(model_path=self.get_random_target_object_path(),
                                                 client=self.client).get_ids()
+        pb.setGravity(0, 0, -9.8)
+        self.done = False
         self.setup_camera()
 
     def step(self, action):
 
         pb.stepSimulation(self.client)
-        self._observation = self.get_observation()
+        self.update_observation()
         if self._renders:
             time.sleep(self._timeStep)
-        pb.setGravity(0, 0, -9.8)
+
+        self.step_number += 1
 
         done = self._termination()
         reward = self._reward()
         return np.array(self._observation), reward, done, {}
 
     def reset(self):
-        pass
+        self.load_world()
 
     def render(self, mode='human', close=False):
         if mode != "rgb_array":
             return np.array([])
-        return self.get_observation()
+        return self.update_observation()
 
     def seed(self, seed=None):
         self.np_random, seed = gym_np_random(seed)
@@ -73,7 +86,7 @@ class JawGripperEnv(gym.Env):
                                                          nearVal=near_val,
                                                          farVal=far_val)
 
-    def get_observation(self):
+    def update_observation(self):
         img_arr = pb.getCameraImage(width=self._width,
                                     height=self._height,
                                     viewMatrix=self.view_matrix,
@@ -86,7 +99,8 @@ class JawGripperEnv(gym.Env):
 
     def get_random_target_object_path(self):
         filenames = sorted(
-            [os.fsdecode(file) for file in os.listdir(self._target_object_models_folder) if os.fsdecode(file).endswith(".urdf")])
+            [os.fsdecode(file) for file in os.listdir(self._target_object_models_folder) if
+             os.fsdecode(file).endswith(".urdf")])
         chosen_model_path = self._target_object_models_folder + '/' + self.np_random.choice(filenames)
         return chosen_model_path
 

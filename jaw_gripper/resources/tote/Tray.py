@@ -9,7 +9,7 @@ class Tray:
 
         self.client = client
         self.base_pos = base_pos
-        self.tray = pb.loadURDF(model_path, basePosition=self.base_pos,physicsClientId=self.client)
+        self.tray = pb.loadURDF(model_path, basePosition=self.base_pos,physicsClientId=self.client,useFixedBase=True)
 
     def get_ids(self):
         return self.client, self.tray

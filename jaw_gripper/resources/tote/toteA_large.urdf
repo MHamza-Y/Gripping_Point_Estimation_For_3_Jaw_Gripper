@@ -7,7 +7,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="ToteA.L.obj" scale="2.21 2.21 1.43"/>
+        <mesh filename="ToteA.L.obj" scale="2.21 2.21 .3"/>
       </geometry>
       <material name="Blanc"/>
     </visual>

@@ -5,11 +5,12 @@ import pybullet as pb
 
 class UR3FRobot:
 
-    def __init__(self, client,model_path='jaw_gripper/resources/fh_desc/model.urdf'):
+    def __init__(self, client,model_path='jaw_gripper/robots/fh_desc/model.urdf'):
         self.client = client
         self.model_path = model_path
         self.gripper_robot = pb.loadURDF(self.model_path, useFixedBase=False,
                                          basePosition=[0, 0, 0.25], physicsClientId=self.client)
+        self.end_effectors = ['H1_F1_link_1','H1_F1_link_2','H1_F2_link_1','H1_F2_link_2','H1_F3_link_1','H1_F3_link_2']
         self.__load_link_name_to_index()
 
     def get_ids(self):

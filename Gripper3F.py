@@ -18,7 +18,7 @@ def main():
     pybullet_data_path = pybullet_data.getDataPath()
     pb.setAdditionalSearchPath(pybullet_data_path)
     plane = pb.loadURDF("plane.urdf")
-    gripper_robot = pb.loadURDF('jaw_gripper/resources/fh_desc/model.urdf', useFixedBase=False, basePosition=[0, 0, 0.5])
+    gripper_robot = pb.loadURDF('jaw_gripper/robots/fh_desc/model.urdf', useFixedBase=False, basePosition=[0, 0, 0.5])
     tray = pb.loadURDF('jaw_gripper/resources/tote/toteA_large.urdf', useFixedBase=True, basePosition = [-0.8, 0, 0])
     random_x = -round(rand.uniform(0.1, 0.6), 10)
 
