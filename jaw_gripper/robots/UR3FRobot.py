@@ -5,13 +5,15 @@ import pybullet as pb
 
 class UR3FRobot:
 
-    def __init__(self, client,model_path='jaw_gripper/robots/fh_desc/model.urdf'):
+    def __init__(self, client, model_path='jaw_gripper/robots/fh_desc/model.urdf'):
         self.client = client
         self.model_path = model_path
         self.gripper_robot = pb.loadURDF(self.model_path, useFixedBase=False,
                                          basePosition=[0, 0, 0.25], physicsClientId=self.client)
-        self.end_effectors = ['H1_F1_link_1','H1_F1_link_2','H1_F2_link_1','H1_F2_link_2','H1_F3_link_1','H1_F3_link_2']
+        self.end_effectors = ['H1_F1_link_1', 'H1_F1_link_2', 'H1_F2_link_1', 'H1_F2_link_2', 'H1_F3_link_1',
+                              'H1_F3_link_2']
         self.__load_link_name_to_index()
+        self.end_effectors_indexes = self.get_link_index_for(self.end_effectors)
 
     def get_ids(self):
         return self.client, self.gripper_robot
@@ -26,5 +28,16 @@ class UR3FRobot:
             _name = pb.getJointInfo(self.gripper_robot, _id)[12].decode('UTF-8')
             self._link_name_to_index[_name] = _id
 
-    def get_link_index_for(self, name):
-        return self._link_name_to_index[name]
+    def get_link_index_for(self, names):
+
+        return map((lambda name: self._link_name_to_index[name]), names)
+
+    def end_effectors_distances_from_object(self, target_object_id):
+        distances = []
+
+        for link in self.end_effectors_indexes:
+            distances.append(
+                pb.getClosestPoints(bodyA=target_object_id, bodyB=self.gripper_robot, distance=10, linkIndexA=-1,
+                                    linkIndexB=link,
+                                    physicsClientId=self.client))
+        return distances

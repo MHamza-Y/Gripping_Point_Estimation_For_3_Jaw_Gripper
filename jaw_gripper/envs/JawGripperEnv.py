@@ -27,7 +27,7 @@ class JawGripperEnv(gym.Env):
         self.observation_space = Box(
             low=np.zeros(shape=[self._height, self._width, 4]),
             high=np.full(shape=[self._height, self._width, 4], fill_value=255))
-        self.action_space = Box()
+        #self.action_space = Box()
         pybullet_data_path = pybullet_data.getDataPath()
         pb.setAdditionalSearchPath(pybullet_data_path)
         self.load_world()
@@ -45,7 +45,7 @@ class JawGripperEnv(gym.Env):
         self.setup_camera()
 
     def step(self, action):
-
+        print(self.robot.end_effectors_distances_from_object(self.target_object_id))
         pb.stepSimulation(self.client)
         self.update_observation()
         if self._renders:
