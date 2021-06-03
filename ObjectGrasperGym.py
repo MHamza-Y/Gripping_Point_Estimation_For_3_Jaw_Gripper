@@ -5,7 +5,6 @@ from jaw_gripper.envs import JawGripperEnv
 import matplotlib.pyplot as plt
 
 env = JawGripperEnv(renders=True)
-env.reset()
 # for _ in range(10000):
 while pb.isConnected(physicsClientId=env.client):
 
