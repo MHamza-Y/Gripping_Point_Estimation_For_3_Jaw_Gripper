@@ -9,13 +9,17 @@ class UR3FRobot:
     def __init__(self, client, model_path='jaw_gripper/robots/fh_desc/model.urdf'):
         self.client = client
         self.model_path = model_path
-        self.gripper_robot = pb.loadURDF(self.model_path, useFixedBase=False,
+        self.gripper_robot = pb.loadURDF(self.model_path, useFixedBase=True,
                                          basePosition=[0, 0, 0.25], physicsClientId=self.client)
+        self.num_joints = pb.getNumJoints(self.gripper_robot)
+        self.motor_names, self.motor_indices = self.get_motor_indices()
+        self.__load_link_name_to_index()
         self.end_effectors = ['H1_F1_link_1', 'H1_F1_link_2', 'H1_F1_tip', 'H1_F2_link_1', 'H1_F2_link_2', 'H1_F2_tip',
                               'H1_F3_link_1',
                               'H1_F3_link_2', 'H1_F3_tip']
-        self.__load_link_name_to_index()
-        self.end_effectors_indexes = self.get_link_index_for(self.end_effectors)
+        self.end_effector = 'H1_base_link'
+        self.end_effector_link_index = self.get_link_index_for(self.end_effector)
+        self.end_effectors_indexes = self.get_link_indices_for(self.end_effectors)
         self.total_num_of_joints = 15
         self.target_velocities = [0] * self.total_num_of_joints
         self.max_forces = [100.] * self.total_num_of_joints
@@ -35,40 +39,49 @@ class UR3FRobot:
             _name = pb.getJointInfo(self.gripper_robot, _id)[12].decode('UTF-8')
             self._link_name_to_index[_name] = _id
 
-    def get_link_index_for(self, names):
+    def get_link_indices_for(self, names):
         return list(map((lambda name: self._link_name_to_index[name]), names))
+
+    def get_link_index_for(self, name):
+        return self._link_name_to_index[name]
 
     def end_effectors_distances_from_object(self, target_object_id):
         distances = []
 
-        joint_states = pb.getLinkStates(bodyUniqueId=self.gripper_robot, linkIndices=self.end_effectors_indexes,
-                                        physicsClientId=self.client)
-
-        print(joint_states[0])
+        link_states = pb.getLinkState(self.gripper_robot, linkIndex=self.end_effector_link_index,
+                                      physicsClientId=self.client)
+        print(link_states[0])
 
         return distances
 
-    def act(self, change_in_positions_raw):
-        change_in_positions = numpy.array(change_in_positions_raw).reshape(-1, 3)
-        target_positions = numpy.array()
-        for index, change_in_position in enumerate(change_in_positions):
-            dx = change_in_position[0]
-            dy = change_in_position[1]
-            dz = change_in_position[2]
-            state = pb.getLinkState(objectUniqueId=self.gripper_robot, linkIndex=index,
-                                    physicsClientId=self.client)
-            x, y, z = state[0]
-            x_target = x + dx
-            y_target = y + dy
-            z_target = z + dz
-            target_pos = [x_target, y_target, z_target]
-            numpy.append(target_positions, [target_pos], axis=0)
+    def get_motor_indices(self):
+        motor_names = []
+        motor_indices = []
+        for i in range(self.num_joints):
+            joint_info = pb.getJointInfo(self.gripper_robot, i, self.client)
+            q_index = joint_info[3]
+            if q_index > -1:
+                motor_names.append(str(joint_info[1]))
+                motor_indices.append(i)
+        return motor_names, motor_indices
 
-        joint_positions = pb.calculateInverseKinematics2(bodyUniqueId=self.gripper_robot,
-                                                         endEffectorLinkIndices=self.end_effectors_indexes,
-                                                         targetPositions=target_positions)
+    def act(self, change_in_positions):
+        dx = change_in_positions[0]
+        dy = change_in_positions[1]
+        dz = change_in_positions[2]
+        state = pb.getLinkState(objectUniqueId=self.gripper_robot, linkIndex=self.end_effector_link_index,
+                                physicsClientId=self.client)
+        x, y, z = state[0]
+        x_target = x + dx
+        y_target = y + dy
+        z_target = z + dz
+        target_pos = [x_target, y_target, z_target]
 
-        pb.setJointMotorControlArray(bodyIndex=self.gripper_robot, jointIndices=range(self.total_num_of_joints),
+        joint_positions = pb.calculateInverseKinematics(bodyUniqueId=self.gripper_robot,
+                                                        endEffectorLinkIndex=self.end_effector_link_index,
+                                                        targetPosition=target_pos)
+
+        pb.setJointMotorControlArray(bodyIndex=self.gripper_robot, jointIndices=self.motor_indices,
                                      controlMode=pb.POSITION_CONTROL,
                                      targetPositions=joint_positions, targetVelocities=self.target_velocities,
                                      forces=self.max_forces,
