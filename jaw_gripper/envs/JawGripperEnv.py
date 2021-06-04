@@ -45,7 +45,6 @@ class JawGripperEnv(gym.Env):
         self.setup_camera()
 
     def step(self, action):
-        print(self.robot.end_effectors_distances_from_object(self.target_object_id))
         pb.stepSimulation(self.client)
         self.update_observation()
         if self._renders:
