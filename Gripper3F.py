@@ -39,7 +39,7 @@ def main():
                                  forces=[1000.] * len(joint_positions),
                                  positionGains=[0.2] * len(joint_positions), velocityGains=[0.6] * len(joint_positions))
 
-    print(robot.joints_map)
+    print(pb.getBasePositionAndOrientation(robot_id))
     while pb.isConnected(physicsClientId=pb_client):
         #robot.end_effectors_distances_from_object(random_obj)
         time.sleep(1. / 240.)

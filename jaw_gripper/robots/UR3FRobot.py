@@ -1,3 +1,5 @@
+import math
+
 import pybullet as pb
 import numpy
 
@@ -18,6 +20,7 @@ class UR3FRobot:
         # gripper joints names, indices and their limits
         self.gripper_joints = ['H1_F1J1', 'H1_F1J2', 'H1_F1J3', 'H1_F2J1', 'H1_F2J2', 'H1_F2J3', 'H1_F3J1', 'H1_F3J2',
                                'H1_F3J3']
+        self.gripper_joints_force = 3
         self.gripper_joints_indices = list(map((lambda name: self.joints_map[name]), self.gripper_joints))
         self.gripper_joints_upper_limits = [0.785398163397, 1.0471975512, 1.57079632679, 0.785398163397, 1.0471975512,
                                             1.57079632679, 0.785398163397, 1.0471975512, 1.57079632679]
@@ -41,37 +44,52 @@ class UR3FRobot:
     def get_ids(self):
         return self.client, self.gripper_robot
 
+    def get_action_space_limits(self):
+        lower_limits = [-0.1, -0.1, -0.1, 0, 0, 0] + self.gripper_joints_lower_limits
+        upper_limits = [0.1, 0.1, 0.1, 2 * math.pi, 2 * math.pi, 2 * math.pi] + self.gripper_joints_upper_limits
+
+        return lower_limits, upper_limits
+
     def apply_action(self, action):
         dx = action[0]
         dy = action[1]
         dz = action[2]
+        alpha = action[3]
+        beta = action[4]
+        gamma = action[5]
+        fingers_joint_positions = action[6:]
 
-        state = pb.getLinkState(objectUniqueId=self.gripper_robot, linkIndex=self.end_effector_link_index,
-                                physicsClientId=self.client)
-        x, y, z = state[0]
+        x, y, z = self.get_end_effector_position()
         x_target = x + dx
         y_target = y + dy
         z_target = z + dz
         target_pos = [x_target, y_target, z_target]
-
+        target_orn = pb.getQuaternionFromEuler([alpha, beta, gamma])
         joint_positions = pb.calculateInverseKinematics(bodyUniqueId=self.gripper_robot,
                                                         endEffectorLinkIndex=self.end_effector_link_index,
-                                                        targetPosition=target_pos)
+                                                        targetPosition=target_pos, targetOrientation=target_orn,
+                                                        physicsClientId=self.client)
 
         pb.setJointMotorControlArray(bodyIndex=self.gripper_robot, jointIndices=self.motor_indices,
                                      controlMode=pb.POSITION_CONTROL,
                                      targetPositions=joint_positions, targetVelocities=self.target_velocities,
                                      forces=self.max_forces,
-                                     positionGains=self.position_gains, velocityGains=self.velocity_gains)
+                                     positionGains=self.position_gains, velocityGains=self.velocity_gains,
+                                     physicsClientId=self.client)
+
+        for joint_index in self.gripper_joints_indices:
+            pb.setJointMotorControl2(bodyUniqueId=self.gripper_robot, jointIndex=joint_index,
+                                     controlMode=pb.POSITION_CONTROL, targetPosition=fingers_joint_positions,
+                                     force=self.gripper_joints_force, physicsClientId=self.client)
+
+    def get_end_effector_position(self):
+        return numpy.array(pb.getLinkState(self.gripper_robot, linkIndex=self.end_effector_link_index,
+                                           physicsClientId=self.client)[0])
 
     def end_effector_distance_from_object(self, target_object_id):
-        distances = []
-
-        link_states = pb.getLinkState(self.gripper_robot, linkIndex=self.end_effector_link_index,
-                                      physicsClientId=self.client)
-        print(link_states[0])
-
-        return distances
+        target_object_pos = numpy.array(
+            pb.getBasePositionAndOrientation(objectUniqueId=target_object_id, physicsClientId=self.client)[0])
+        return numpy.linalg.norm(self.get_end_effector_position() - target_object_pos)
 
     def __load_link_name_to_index(self):
         self._link_name_to_index = {pb.getBodyInfo(self.gripper_robot)[0].decode('UTF-8'): -1, }

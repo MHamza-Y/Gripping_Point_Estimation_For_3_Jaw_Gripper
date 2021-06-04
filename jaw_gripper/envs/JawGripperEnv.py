@@ -24,13 +24,19 @@ class JawGripperEnv(gym.Env):
         self._seed = self.seed()
         self.pb_connection_type = pb.GUI if self._renders else pb.DIRECT
         self.client = pb.connect(self.pb_connection_type)
-        self.observation_space = Box(
-            low=np.zeros(shape=[self._height, self._width, 4]),
-            high=np.full(shape=[self._height, self._width, 4], fill_value=255))
-        #self.action_space = Box()
         pybullet_data_path = pybullet_data.getDataPath()
         pb.setAdditionalSearchPath(pybullet_data_path)
         self.load_world()
+        action_space_lower_limits, action_space_upper_limits = self.robot.get_action_space_limits()
+
+        self.observation_space = Box(
+            low=np.zeros(shape=[self._height, self._width, 4]),
+            high=np.full(shape=[self._height, self._width, 4], fill_value=255)
+        )
+        self.action_space = Box(
+            low=np.array(action_space_lower_limits),
+            high=np.array(action_space_upper_limits)
+        )
 
     def load_world(self):
         self.step_number = 0
@@ -107,4 +113,4 @@ class JawGripperEnv(gym.Env):
         return {}
 
     def _reward(self):
-        return {}
+        return 1-(self.robot.end_effector_distance_from_object(self.target_object_id)/4)
