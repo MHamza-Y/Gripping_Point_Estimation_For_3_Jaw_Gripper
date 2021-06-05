@@ -42,10 +42,9 @@ class UR3FRobot:
         self.finger_3_links = ['H1_F3_link_1', 'H1_F3_link_2']
         self.finger_3_links_indices = list(map((lambda name: self._link_name_to_index[name]), self.finger_3_links))
 
-
         self.total_num_of_joints = len(self.motor_indices)
         self.target_velocities = [0] * self.total_num_of_joints
-        self.max_forces = [100.] * self.total_num_of_joints
+        self.max_forces = [500.] * self.total_num_of_joints
         self.position_gains = [0.3] * self.total_num_of_joints
         self.velocity_gains = [1] * self.total_num_of_joints
 
@@ -96,7 +95,8 @@ class UR3FRobot:
 
     def end_effector_distance_from_object(self, target_object_id):
         target_object_pos = numpy.array(
-            pb.getBasePositionAndOrientation(bodyUniqueId=target_object_id, physicsClientId=self.client)[0])
+            pb.getBasePositionAndOrientation(bodyUniqueId=target_object_id, physicsClientId=self.client)[0],
+            dtype=numpy.float32)
         return numpy.linalg.norm(self.get_end_effector_position() - target_object_pos)
 
     def __load_link_name_to_index(self):
@@ -131,5 +131,28 @@ class UR3FRobot:
         return motor_names, motor_indices
 
     def fingers_in_contact_with(self, target_object_id):
+        finger_1_touching = False
         for link_index in self.finger_1_links_indices:
-            pb.getContactPoints(bodyA=self.gripper_robot, bodyB=target_object_id, linkIndexA=link_index,physicsClientId=self.client)
+            finger_1_contact_points = pb.getContactPoints(bodyA=self.gripper_robot, bodyB=target_object_id,
+                                                          linkIndexA=link_index,
+                                                          physicsClientId=self.client)
+            if finger_1_contact_points:
+                finger_1_touching = True
+
+        finger_2_touching = False
+        for link_index in self.finger_2_links_indices:
+            finger_2_contact_points = pb.getContactPoints(bodyA=self.gripper_robot, bodyB=target_object_id,
+                                                          linkIndexA=link_index,
+                                                          physicsClientId=self.client)
+            if finger_2_contact_points:
+                finger_2_touching = True
+
+        finger_3_touching = False
+        for link_index in self.finger_3_links_indices:
+            finger_3_contact_points = pb.getContactPoints(bodyA=self.gripper_robot, bodyB=target_object_id,
+                                                          linkIndexA=link_index,
+                                                          physicsClientId=self.client)
+            if finger_3_contact_points:
+                finger_3_touching = True
+
+        return finger_1_touching and finger_2_touching and finger_3_touching

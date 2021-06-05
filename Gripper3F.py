@@ -6,6 +6,7 @@ import numpy
 import pybullet as pb
 import pybullet_data
 # from stable_baselines.common.policies import CnnPolicy
+from stable_baselines3.common.env_checker import check_env
 
 from jaw_gripper.envs import JawGripperEnv
 from jaw_gripper.robots.UR3FRobot import UR3FRobot
@@ -37,10 +38,9 @@ def main():
     #                              targetPositions=joint_positions, targetVelocities=[0] * len(joint_positions),
     #                              forces=[1000.] * len(joint_positions),
     #                              positionGains=[0.2] * len(joint_positions), velocityGains=[0.6] * len(joint_positions))
-
+    check_env(env=JawGripperEnv(renders=True))
     while pb.isConnected(physicsClientId=pb_client):
-        print(pb.getContactPoints(bodyA=random_obj, bodyB=robot_id,
-                                  linkIndexB=robot.finger_1_links_indices[0]))
+
         #robot.end_effectors_distances_from_object(random_obj)
         time.sleep(1. / 240.)
 
