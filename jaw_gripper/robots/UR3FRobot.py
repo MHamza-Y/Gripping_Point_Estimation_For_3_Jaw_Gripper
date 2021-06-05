@@ -14,9 +14,9 @@ class UR3FRobot:
         self.gripper_robot = pb.loadURDF(self.model_path, useFixedBase=True,
                                          basePosition=[0, 0, 0.25], physicsClientId=self.client)
 
-        self.num_joints = pb.getNumJoints(self.gripper_robot)
+        self.num_joints = pb.getNumJoints(self.gripper_robot, physicsClientId=self.client)
         self.joints_map = self.get_joints_map()
-
+        print(self.joints_map)
         # gripper joints names, indices and their limits
         self.gripper_joints = ['H1_F1J1', 'H1_F1J2', 'H1_F1J3', 'H1_F2J1', 'H1_F2J2', 'H1_F2J3', 'H1_F3J1', 'H1_F3J2',
                                'H1_F3J3']
@@ -30,10 +30,18 @@ class UR3FRobot:
         # moveable joints names and indices
         self.motor_names, self.motor_indices = self.get_motor_indices()
         self.__load_link_name_to_index()
-
+        print(self._link_name_to_index)
         # end effector joint name and index
         self.end_effector_link_name = 'H1_base_link'
         self.end_effector_link_index = self.get_link_index_for(self.end_effector_link_name)
+
+        self.finger_1_links = ['H1_F1_link_1', 'H1_F1_link_2']
+        self.finger_1_links_indices = list(map((lambda name: self._link_name_to_index[name]), self.finger_1_links))
+        self.finger_2_links = ['H1_F2_link_1', 'H1_F2_link_2']
+        self.finger_2_links_indices = list(map((lambda name: self._link_name_to_index[name]), self.finger_2_links))
+        self.finger_3_links = ['H1_F3_link_1', 'H1_F3_link_2']
+        self.finger_3_links_indices = list(map((lambda name: self._link_name_to_index[name]), self.finger_3_links))
+
 
         self.total_num_of_joints = len(self.motor_indices)
         self.target_velocities = [0] * self.total_num_of_joints
@@ -77,9 +85,9 @@ class UR3FRobot:
                                      positionGains=self.position_gains, velocityGains=self.velocity_gains,
                                      physicsClientId=self.client)
 
-        for joint_index in self.gripper_joints_indices:
-            pb.setJointMotorControl2(bodyUniqueId=self.gripper_robot, jointIndex=joint_index,
-                                     controlMode=pb.POSITION_CONTROL, targetPosition=fingers_joint_positions,
+        for i, joint_index in enumerate(self.gripper_joints_indices):
+            pb.setJointMotorControl2(bodyIndex=self.gripper_robot, jointIndex=joint_index,
+                                     controlMode=pb.POSITION_CONTROL, targetPosition=fingers_joint_positions[i],
                                      force=self.gripper_joints_force, physicsClientId=self.client)
 
     def get_end_effector_position(self):
@@ -88,14 +96,14 @@ class UR3FRobot:
 
     def end_effector_distance_from_object(self, target_object_id):
         target_object_pos = numpy.array(
-            pb.getBasePositionAndOrientation(objectUniqueId=target_object_id, physicsClientId=self.client)[0])
+            pb.getBasePositionAndOrientation(bodyUniqueId=target_object_id, physicsClientId=self.client)[0])
         return numpy.linalg.norm(self.get_end_effector_position() - target_object_pos)
 
     def __load_link_name_to_index(self):
         self._link_name_to_index = {pb.getBodyInfo(self.gripper_robot)[0].decode('UTF-8'): -1, }
 
-        for _id in range(pb.getNumJoints(self.gripper_robot)):
-            _name = pb.getJointInfo(self.gripper_robot, _id)[12].decode('UTF-8')
+        for _id in range(pb.getNumJoints(self.gripper_robot, physicsClientId=self.client)):
+            _name = pb.getJointInfo(self.gripper_robot, _id, physicsClientId=self.client)[12].decode('UTF-8')
             self._link_name_to_index[_name] = _id
 
     def get_link_index_for(self, name):
@@ -103,9 +111,9 @@ class UR3FRobot:
 
     def get_joints_map(self):
         joints_map = {}
+        print(self.num_joints)
         for i in range(self.num_joints):
             joint_info = pb.getJointInfo(self.gripper_robot, i, self.client)
-            q_index = joint_info[3]
             join_name = str(joint_info[1]).replace("b'", "").replace("'", "")
             joints_map[join_name] = i
 
@@ -121,3 +129,7 @@ class UR3FRobot:
                 motor_names.append(str(joint_info[1]))
                 motor_indices.append(i)
         return motor_names, motor_indices
+
+    def fingers_in_contact_with(self, target_object_id):
+        for link_index in self.finger_1_links_indices:
+            pb.getContactPoints(bodyA=self.gripper_robot, bodyB=target_object_id, linkIndexA=link_index,physicsClientId=self.client)

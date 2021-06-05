@@ -5,7 +5,6 @@ import time
 import numpy
 import pybullet as pb
 import pybullet_data
-# from stable_baselines import DDPG
 # from stable_baselines.common.policies import CnnPolicy
 
 from jaw_gripper.envs import JawGripperEnv
@@ -30,17 +29,18 @@ def main():
     pb.setGravity(0, 0, -10)
     num_joints = pb.getNumJoints(robot_id)
 
-    joint_positions = pb.calculateInverseKinematics(robot_id,
-                                                    robot.end_effector_link_index,
-                                                    [0.5, 0.5, 0.5],maxNumIterations=50)
-    pb.setJointMotorControlArray(robot_id, jointIndices=robot.motor_indices,
-                                 controlMode=pb.POSITION_CONTROL,
-                                 targetPositions=joint_positions, targetVelocities=[0] * len(joint_positions),
-                                 forces=[1000.] * len(joint_positions),
-                                 positionGains=[0.2] * len(joint_positions), velocityGains=[0.6] * len(joint_positions))
+    # joint_positions = pb.calculateInverseKinematics(robot_id,
+    #                                                 robot.end_effector_link_index,
+    #                                                 [0.5, 0.5, 0.5],maxNumIterations=50)
+    # pb.setJointMotorControlArray(robot_id, jointIndices=robot.motor_indices,
+    #                              controlMode=pb.POSITION_CONTROL,
+    #                              targetPositions=joint_positions, targetVelocities=[0] * len(joint_positions),
+    #                              forces=[1000.] * len(joint_positions),
+    #                              positionGains=[0.2] * len(joint_positions), velocityGains=[0.6] * len(joint_positions))
 
-    print(pb.getBasePositionAndOrientation(robot_id))
     while pb.isConnected(physicsClientId=pb_client):
+        print(pb.getContactPoints(bodyA=random_obj, bodyB=robot_id,
+                                  linkIndexB=robot.finger_1_links_indices[0]))
         #robot.end_effectors_distances_from_object(random_obj)
         time.sleep(1. / 240.)
 

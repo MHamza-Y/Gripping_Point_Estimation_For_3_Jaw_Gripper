@@ -1,3 +1,4 @@
+import numpy
 from gym.spaces import Box
 from gym.utils.seeding import np_random as gym_np_random
 import gym
@@ -14,8 +15,9 @@ from jaw_gripper.robots.UR3FRobot import UR3FRobot
 class JawGripperEnv(gym.Env):
 
     def __init__(self, width=960, height=720, timeStep=(1. / 240.), renders=False,
-                 target_object_models_folder='jaw_gripper/resources/models/ycb'):
+                 target_object_models_folder='jaw_gripper/resources/models/ycb', max_steps=3600):
         self._timeStep = timeStep
+        self.max_steps = max_steps
         self._width = width
         self._height = height
         self._observation = []
@@ -26,13 +28,11 @@ class JawGripperEnv(gym.Env):
         self.client = pb.connect(self.pb_connection_type)
         pybullet_data_path = pybullet_data.getDataPath()
         pb.setAdditionalSearchPath(pybullet_data_path)
+        print('pre load')
         self.load_world()
         action_space_lower_limits, action_space_upper_limits = self.robot.get_action_space_limits()
 
-        self.observation_space = Box(
-            low=np.zeros(shape=[self._height, self._width, 4]),
-            high=np.full(shape=[self._height, self._width, 4], fill_value=255)
-        )
+        self.observation_space = Box(0, 255, [self._height, self._width, 5], np.uint8)
         self.action_space = Box(
             low=np.array(action_space_lower_limits),
             high=np.array(action_space_upper_limits)
@@ -51,19 +51,21 @@ class JawGripperEnv(gym.Env):
         self.setup_camera()
 
     def step(self, action):
-        pb.stepSimulation(self.client)
-        self.update_observation()
+
         if self._renders:
             time.sleep(self._timeStep)
-
+        self.robot.apply_action(action)
+        pb.stepSimulation(self.client)
         self.step_number += 1
-
+        print(action)
         done = self._termination()
         reward = self._reward()
-        return np.array(self._observation), reward, done, {}
+        print(reward)
+        return self.update_observation(), reward, done, {}
 
     def reset(self):
         self.load_world()
+        return self.update_observation()
 
     def render(self, mode='human', close=False):
         if mode != "rgb_array":
@@ -74,7 +76,7 @@ class JawGripperEnv(gym.Env):
         self.np_random, seed = gym_np_random(seed)
         return [seed]
 
-    def setup_camera(self, camera_target_position=None, cam_dist=1.1, cam_yaw=0, cam_pitch=-40, fov=60, near_val=0.1,
+    def setup_camera(self, camera_target_position=None, cam_dist=1.4, cam_yaw=0, cam_pitch=-40, fov=60, near_val=0.3,
                      far_val=3):
 
         if camera_target_position is None:
@@ -97,9 +99,12 @@ class JawGripperEnv(gym.Env):
                                     viewMatrix=self.view_matrix,
                                     projectionMatrix=self.proj_matrix,
                                     renderer=pb.ER_BULLET_HARDWARE_OPENGL)
-        rgb = img_arr[2]
-        np_img_arr = np.reshape(rgb, (self._height, self._width, 4))
-        self._observation = np_img_arr
+
+        rgba = img_arr[2]
+        np_img_arr = np.reshape(rgba, (self._height, self._width, 4))
+        rgb_with_depth_and_segmentation = np.dstack((np_img_arr[:, :, :3], img_arr[3], img_arr[4]))
+        self._observation = rgb_with_depth_and_segmentation
+        print(np.shape(self._observation))
         return self._observation
 
     def get_random_target_object_path(self):
@@ -110,7 +115,13 @@ class JawGripperEnv(gym.Env):
         return chosen_model_path
 
     def _termination(self):
-        return {}
+        if self.step_number >= self.max_steps:
+            return True
+        return False
 
     def _reward(self):
-        return 1-(self.robot.end_effector_distance_from_object(self.target_object_id)/4)
+        distance_reward = (1 - (self.robot.end_effector_distance_from_object(self.target_object_id) / 4))*10
+        if self.robot.fingers_in_contact_with(self.target_object_id):
+            x = 5
+        reward = distance_reward
+        return reward
