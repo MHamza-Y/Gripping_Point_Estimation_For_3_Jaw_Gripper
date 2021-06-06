@@ -12,7 +12,8 @@ class UR3FRobot:
         self.client = client
         self.model_path = model_path
         self.gripper_robot = pb.loadURDF(self.model_path, useFixedBase=True,
-                                         basePosition=[0, 0, 0.25], physicsClientId=self.client)
+                                         basePosition=[0, 0, 0.25], physicsClientId=self.client,
+                                         flags=pb.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
         self.num_joints = pb.getNumJoints(self.gripper_robot, physicsClientId=self.client)
         self.joints_map = self.get_joints_map()
