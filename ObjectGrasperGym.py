@@ -19,7 +19,7 @@ checkpoint_callback = CheckpointCallback(save_freq=10000, save_path=save_folder,
 env = JawGripperEnv(renders=True)
 env = Monitor(env, save_folder)
 
-best_model_save_callback = SaveOnBestTrainingRewardCallback(check_freq=4100, log_dir=save_folder)
+best_model_save_callback = SaveOnBestTrainingRewardCallback(check_freq=2110, log_dir=save_folder)
 
 # n_actions = env.action_space.shape[-1]
 # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
@@ -32,7 +32,7 @@ best_model_save_callback = SaveOnBestTrainingRewardCallback(check_freq=4100, log
 #             sde_sample_freq=100, n_steps=4200,
 #             batch_size=100, seed=56556, gamma=0.95,ent_coef=0.01)
 
-model = PPO.load('training_ws/rl_model_1038000_steps.zip', env=env, n_steps=4200)
+model = PPO.load('training_ws/rl_model_1038000_steps.zip', env=env, n_steps=2100, gamma=0.95, ent_coef=0.01)
 
 model.learn(
     total_timesteps=10000000, callback=[best_model_save_callback, checkpoint_callback])
