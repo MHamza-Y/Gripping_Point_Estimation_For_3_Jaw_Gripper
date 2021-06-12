@@ -3,6 +3,7 @@ import random as rand
 import time
 
 import numpy
+import numpy as np
 import pybullet as pb
 import pybullet_data
 # from stable_baselines.common.policies import CnnPolicy
@@ -41,15 +42,14 @@ def main():
     #                              positionGains=[0.2] * len(joint_positions), velocityGains=[0.6] * len(joint_positions))
     # print(f'{robot.motor_names[1]}:{robot.motor_indices[1]}')
 
-    env = JawGripperEnv(renders=False)
+    env = JawGripperEnv(renders=True)
     observation = env.update_observation()
-    # while pb.isConnected(physicsClientId=env.client):
-    #     #print(pb.getLinkState(robot_id, robot.end_effector_link_index))
-    #     # print(joint_positions)
-    #     # print(numpy.array(pb.getJointStates(robot_id,robot.motor_indices))[:,0])
-    #     #robot.end_effectors_distances_from_object(random_obj)
-    #     time.sleep(1. / 240.)
-
+    while pb.isConnected(physicsClientId=env.client):
+        pb.setRealTimeSimulation(True, env.client)
+        states = pb.getJointStates(env.robot.gripper_robot,env.robot.motor_indices)
+        env.update_observation()
+        print(np.array(states)[:,0])
+        time.sleep(1. / 240.)
 
 
 main()

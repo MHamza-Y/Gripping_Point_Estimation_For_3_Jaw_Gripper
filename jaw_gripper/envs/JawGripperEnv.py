@@ -1,3 +1,5 @@
+import math
+
 import numpy
 from gym.spaces import Box
 from gym.utils.seeding import np_random as gym_np_random
@@ -14,7 +16,7 @@ from jaw_gripper.robots.UR3FRobot import UR3FRobot
 
 class JawGripperEnv(gym.Env):
 
-    def __init__(self, width=480, height=360, timeStep=(1. / 240.), renders=False,
+    def __init__(self, width=432, height=576, timeStep=(1. / 240.), renders=False,
                  target_object_models_folder='jaw_gripper/resources/models/ycb', max_steps=300):
         self.done = False
         self._timeStep = timeStep
@@ -32,7 +34,7 @@ class JawGripperEnv(gym.Env):
         self.load_world()
         action_space_lower_limits, action_space_upper_limits = self.robot.get_action_space_limits()
 
-        self.observation_space = Box(0, 255, [self._height, self._width, 5], np.uint8)
+        self.observation_space = Box(0, 255, [self._height, self._width, 3], np.uint8)
         self.action_space = Box(
             low=np.array(action_space_lower_limits),
             high=np.array(action_space_upper_limits)
@@ -57,7 +59,6 @@ class JawGripperEnv(gym.Env):
         self.robot.apply_action(action)
         pb.stepSimulation(self.client)
         self.step_number += 1
-        print(action)
         done = self._termination()
         reward = self._reward()
         print(f'Reward: {reward}')
@@ -79,18 +80,18 @@ class JawGripperEnv(gym.Env):
         self.np_random, seed = gym_np_random(seed)
         return [seed]
 
-    def setup_camera(self, camera_target_position=None, cam_dist=2, cam_yaw=0, cam_pitch=-90, fov=60, near_val=0.3,
-                     far_val=10):
+    def setup_camera(self, camera_target_position=None, cam_dist=2, cam_yaw=-110, cam_pitch=-35, fov=75, near_val=0.3,
+                     far_val=100):
         self.near_val = near_val
         self.far_val = far_val
         if camera_target_position is None:
-            camera_target_position = [0, 0, 0]
+            camera_target_position = [-0.4, -0.3, 0.3]
 
         self.view_matrix = pb.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=camera_target_position,
                                                                 distance=cam_dist,
                                                                 yaw=cam_yaw,
                                                                 pitch=cam_pitch,
-                                                                roll=-45,
+                                                                roll=0,
                                                                 upAxisIndex=2)
         self.proj_matrix = pb.computeProjectionMatrixFOV(fov=fov,
                                                          aspect=float(self._width) / self._height,
@@ -106,12 +107,11 @@ class JawGripperEnv(gym.Env):
 
         rgba = img_arr[2]
         np_img_arr = np.reshape(rgba, (self._height, self._width, 4))
-        depth_buffer_opengl = np.reshape(img_arr[3], [self._height, self._width])
-        depth_opengl = self.far_val * self.near_val / (self.far_val - (self.far_val - self.near_val) * depth_buffer_opengl)
-        segmented_mask = np.reshape(img_arr[4], [self._height, self._width])
-        rgb_with_depth_and_segmentation = np.dstack((np_img_arr[:, :, :3], depth_opengl, segmented_mask))
-        self._observation = rgb_with_depth_and_segmentation
-        print(np.shape(self._observation))
+        # depth_buffer_opengl = np.reshape(img_arr[3], [self._height, self._width])
+        # depth_opengl = self.far_val * self.near_val / (self.far_val - (self.far_val - self.near_val) * depth_buffer_opengl)
+        # segmented_mask = np.reshape(img_arr[4], [self._height, self._width])
+        # rgb_with_depth_and_segmentation = np.dstack((np_img_arr[:, :, :3], depth_opengl, segmented_mask))
+        self._observation = np_img_arr[:, :, :3]
         return self._observation
 
     def get_random_target_object_path(self):
@@ -127,21 +127,27 @@ class JawGripperEnv(gym.Env):
         return False
 
     def _reward(self):
-        fingers_touching_object_reward = 0
-        distance_reward = (1 - (self.robot.end_effector_distance_from_object(self.target_object_id) / 4)) * 10
+        distance_reward = -10*self.robot.end_effector_distance_from_object(self.target_object_id)
+        touching_floor_penalty = 0
+        time_discount_factor = (self.max_steps - self.step_number) / self.max_steps
+
         if self.robot.fingers_in_contact_with(self.target_object_id):
             end_effector_height = self.robot.get_end_effector_position()[2]
-            fingers_touching_object_reward = 30 * end_effector_height
-            if end_effector_height > 0.4:
-                fingers_touching_object_reward += 1000
+            fingers_touching_object_reward = 10 * end_effector_height
+            if end_effector_height > 0.5:
+                fingers_touching_object_reward += 3000
                 self.done = True
+        else:
+            fingers_touching_object_reward = -30
+        if self.robot.is_in_contact_with_object(self.plane):
+            touching_floor_penalty = -30
 
-        time_reward = 300/self.step_number
-        self.reward = distance_reward + fingers_touching_object_reward + time_reward
+        print(f'Distance reward: {distance_reward}')
+        self.reward = distance_reward + fingers_touching_object_reward + touching_floor_penalty
         return self.reward
 
     def close(self):
         pb.disconnect(self.client)
 
-    # def __del__(self):
-    #     pb.disconnect(self.client)
+    def __del__(self):
+        pb.disconnect(self.client)
