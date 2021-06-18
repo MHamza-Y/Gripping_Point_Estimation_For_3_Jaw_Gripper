@@ -5,7 +5,7 @@ class TargetObject:
 
     def __init__(self, model_path, client, base_pos=None):
         if base_pos is None:
-            base_pos = [-0.68, 0, 0.08]
+            base_pos = [-0.68, 0, 0.03]
         self.model_path = model_path
         self.base_pos = base_pos
         self.client = client

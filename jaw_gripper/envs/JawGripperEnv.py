@@ -17,10 +17,11 @@ from jaw_gripper.robots.UR3FRobot import UR3FRobot
 class JawGripperEnv(gym.Env):
 
     def __init__(self, width=432, height=576, timeStep=(1. / 240.), renders=False,
-                 target_object_models_folder='jaw_gripper/resources/models/ycb', max_steps=300):
+                 target_object_models_folder='jaw_gripper/resources/models/ycb', max_steps=300,frame_skip=4):
         self.done = False
         self._timeStep = timeStep
         self.max_steps = max_steps
+        self.frame_skip = frame_skip
         self._width = width
         self._height = height
         self._observation = []
@@ -45,7 +46,7 @@ class JawGripperEnv(gym.Env):
         pb.resetSimulation(self.client)
         self.plane = pb.loadURDF("plane.urdf")
         self.robot = UR3FRobot(self.client)
-        _, self.tray = Tray(self.client).get_ids()
+        #_, self.tray = Tray(self.client).get_ids()
         _, self.target_object_id = TargetObject(model_path=self.get_random_target_object_path(),
                                                 client=self.client).get_ids()
         pb.setGravity(0, 0, -9.8)
@@ -54,8 +55,10 @@ class JawGripperEnv(gym.Env):
         self.setup_camera()
 
     def step(self, action):
-        if self._renders:
-            time.sleep(self._timeStep)
+        for i in range(self.frame_skip):
+            pb.stepSimulation(self.client)
+        #if self._renders:
+            #time.sleep(self._timeStep)
         self.robot.apply_action(action)
         pb.stepSimulation(self.client)
         self.step_number += 1
@@ -80,12 +83,13 @@ class JawGripperEnv(gym.Env):
         self.np_random, seed = gym_np_random(seed)
         return [seed]
 
-    def setup_camera(self, camera_target_position=None, cam_dist=2, cam_yaw=-110, cam_pitch=-35, fov=75, near_val=0.3,
+    def setup_camera(self, camera_target_position=None, cam_dist=2.6, cam_yaw=-120.4, cam_pitch=-45.8, fov=75,
+                     near_val=0.3,
                      far_val=100):
         self.near_val = near_val
         self.far_val = far_val
         if camera_target_position is None:
-            camera_target_position = [-0.4, -0.3, 0.3]
+            camera_target_position = [0.0, 0.0, 0.0]
 
         self.view_matrix = pb.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=camera_target_position,
                                                                 distance=cam_dist,
@@ -127,7 +131,7 @@ class JawGripperEnv(gym.Env):
         return False
 
     def _reward(self):
-        distance_reward = -10*self.robot.end_effector_distance_from_object(self.target_object_id)
+        distance_reward = -10 * self.robot.end_effector_distance_from_object(self.target_object_id)
         touching_floor_penalty = 0
         time_discount_factor = (self.max_steps - self.step_number) / self.max_steps
 
@@ -138,7 +142,7 @@ class JawGripperEnv(gym.Env):
                 fingers_touching_object_reward += 3000
                 self.done = True
         else:
-            fingers_touching_object_reward = -30
+            fingers_touching_object_reward = -10
         if self.robot.is_in_contact_with_object(self.plane):
             touching_floor_penalty = -30
 

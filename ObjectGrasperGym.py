@@ -24,18 +24,15 @@ best_model_save_callback = SaveOnBestTrainingRewardCallback(check_freq=2110, log
 # n_actions = env.action_space.shape[-1]
 # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
-# model = PPO(policy=ActorCriticCnnPolicy, env=env, verbose=2, tensorboard_log=save_folder, use_sde=True,
-#             sde_sample_freq=100, n_steps=2100,
-#             batch_size=100, seed=56556, gamma=0.75)
+model = PPO(policy=ActorCriticCnnPolicy, env=env, verbose=2, tensorboard_log=save_folder, use_sde=True,
+            sde_sample_freq=60, n_steps=9500,
+            batch_size=64, seed=564664, clip_range_vf=0.2, learning_rate=0.0008)
 
-# PPO(policy=ActorCriticCnnPolicy, env=env, verbose=2, tensorboard_log=save_folder, use_sde=True,
-#             sde_sample_freq=100, n_steps=4200,
-#             batch_size=100, seed=56556, gamma=0.95,ent_coef=0.01)
-
-model = PPO.load('training_ws/rl_model_1038000_steps.zip', env=env, n_steps=2100, gamma=0.95, ent_coef=0.01)
-
+# model = PPO.load('training_ws/rl_model_350000_steps.zip', env=env, use_sde=True,
+#                  sde_sample_freq=30, n_steps=2100,
+#                  batch_size=75, seed=56556, gamma=0.995, gae_lambda=0.97)
 model.learn(
-    total_timesteps=10000000, callback=[best_model_save_callback, checkpoint_callback])
+   total_timesteps=10000000, callback=[best_model_save_callback, checkpoint_callback])
 
 obs = env.reset()
 while pb.isConnected(physicsClientId=env.client):

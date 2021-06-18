@@ -70,9 +70,10 @@ class UR3FRobot:
         return lower_limits, upper_limits
 
     def apply_action(self, action):
-        dx = action[0]
-        dy = action[1]
-        dz = action[2]
+        damping = 0.0005
+        dx = action[0]*damping
+        dy = action[1]*damping
+        dz = action[2]*damping
         alpha = action[3]
         beta = action[4]
         gamma = action[5]
